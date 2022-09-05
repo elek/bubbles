@@ -1,120 +1,100 @@
 package ui
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 var (
-	Selected = lipgloss.NewStyle().Background(lipgloss.Color("#EFEFEF")).Foreground(lipgloss.Color("#DD0000"))
+	Selected = lipgloss.NewStyle().Background(lipgloss.Color("#404040"))
 )
 
-type List struct {
-	content  ListContent
-	width    int
-	height   int
-	start    int
-	selected int
-	style    lipgloss.Style
+type List[T any] struct {
+	content       []T
+	size          tea.WindowSizeMsg
+	start         int
+	selected      int
+	style         lipgloss.Style
+	Render        func(T) string
+	SelectedStyle lipgloss.Style
 }
 
-type SelectedMsg struct {
-	Item interface{}
-}
-type ListContent interface {
-	Size() int
-	Render(int) string
-	Item(int) interface{}
-	Refresh()
+type FocusedItemMsg[T any] struct {
+	Item T
 }
 
-type TreeContent interface {
-	ListContent
-	Choose(int)
-	Up()
-}
-
-func NewList(content ListContent) *List {
-	return &List{
+func NewList[T any](content []T, render func(T) string) *List[T] {
+	return &List[T]{
 		content: content,
-		width:   40,
-		height:  20,
+		size: tea.WindowSizeMsg{
+			Width:  100,
+			Height: 50,
+		},
+		Render:        render,
+		SelectedStyle: Selected,
 	}
 }
 
-func (t *List) Init() tea.Cmd {
+func (t *List[T]) Init() tea.Cmd {
 	return func() tea.Msg {
-		return RefreshMsg{}
+		if len(t.content) > t.selected {
+			return FocusedItemMsg[T]{
+				Item: t.content[t.selected],
+			}
+		}
+		return nil
 	}
 }
 
-func (t *List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
+func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case ResizeMsg:
+	case tea.WindowSizeMsg:
 		w, h := t.style.GetFrameSize()
 		t.style.Height(msg.Height - h)
 		t.style.Width(msg.Width - w)
-
-		t.width = msg.Width - w
-		t.height = msg.Height - h
-
-	case RefreshMsg:
-		t.content.Refresh()
+		t.size = msg
 	case tea.KeyMsg:
-		if msg.String() == "q" {
-			return t, tea.Quit
-		}
 		switch msg.Type {
-		case tea.KeyEscape:
-			if tree, ok := t.content.(TreeContent); ok {
-				tree.Up()
-				return t, func() tea.Msg {
-					return SelectedMsg{
-						Item: tree.Item(t.selected),
-					}
-				}
-			}
 		case tea.KeyDown, tea.KeyPgDown:
+			_, h := t.style.GetFrameSize()
+			height := t.size.Height - h
 			if msg.Type == tea.KeyDown {
 				t.selected++
 			} else {
-				t.selected += t.height
+				t.selected += height
 			}
 
-			if t.selected > t.content.Size()-1 {
-				t.selected = t.content.Size() - 1
+			if t.selected > len(t.content)-1 {
+				t.selected = len(t.content) - 1
 			}
-			if t.selected-t.start >= t.height {
-				t.start += t.height
+			if t.selected-t.start >= height {
+				t.start += height
 			}
 			return t, func() tea.Msg {
-				return SelectedMsg{
-					Item: t.content.Item(t.selected),
+				return FocusedItemMsg[T]{
+					Item: t.content[t.selected],
 				}
 			}
 		case tea.KeyUp, tea.KeyPgUp:
+			_, h := t.style.GetFrameSize()
+			height := t.size.Height - h
+
 			if msg.Type == tea.KeyUp {
 				t.selected--
 			} else {
-				t.selected -= t.height
+				t.selected -= height
 			}
 
 			if t.selected < 0 {
 				t.selected = 0
 			}
 			if t.selected-t.start < 0 {
-				t.start -= t.height
+				t.start -= height
 			}
 			return t, func() tea.Msg {
-				return SelectedMsg{
-					Item: t.content.Item(t.selected),
+				return FocusedItemMsg[T]{
+					Item: t.content[t.selected],
 				}
-			}
-		case tea.KeyEnter:
-			if tree, ok := t.content.(TreeContent); ok {
-				tree.Choose(t.selected)
 			}
 		}
 
@@ -122,24 +102,41 @@ func (t *List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, nil
 }
 
-func (t *List) View() string {
+func (t *List[T]) View() string {
+	w, h := t.style.GetFrameSize()
+	height := t.size.Height - h
+	width := t.size.Width - w
+
 	out := ""
-	for i := t.start; i < t.start+t.height; i++ {
-		if i >= t.content.Size() {
+	for i := t.start; i < t.start+height; i++ {
+		if i >= len(t.content) {
 			break
 		}
-		line := t.content.Render(i)
-		if len(line) > t.width {
-			line = line[:t.width]
+
+		line := t.Render(t.content[i])
+		if lipgloss.Width(line) > width {
+			line = AnsiTrim(line, width)
 		}
 		if out != "" {
 			out += "\n"
 		}
-		val := fmt.Sprintf("%d: %s", i, line)
 		if i == t.selected {
-			val = Selected.Render(val)
+			line = t.SelectedStyle.Render(line)
 		}
-		out += val
+		out += line
 	}
 	return t.style.Render(out)
+}
+
+func (t *List[T]) Reset() {
+	t.selected = 0
+	t.start = 0
+}
+
+func (t *List[T]) SetContent(n []T) {
+	t.content = n
+}
+
+func (t *List[T]) Selected() T {
+	return t.content[t.selected]
 }

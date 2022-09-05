@@ -15,7 +15,7 @@ func TestScrolled(t *testing.T) {
 	update, _ := s.Update(initialMsg)
 	s = update.(*Scrolled)
 
-	update, _ = s.Update(ResizeMsg{
+	update, _ = s.Update(tea.WindowSizeMsg{
 		Width:  4,
 		Height: 3,
 	})

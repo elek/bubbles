@@ -3,21 +3,62 @@ package main
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	ui "github.com/elek/bubbles"
 	"os"
-	"strings"
 )
 
 func main() {
 
+	var g []string
+	for i := 0; i < 100; i++ {
+		g = append(g, fmt.Sprintf("Item# %d", i))
+	}
+
+	v := ui.Vertical{}
+	v.Add(&ui.Text{
+		Content: func() string {
+			return "aaa1\n2\n3\n4\n5\n6\n7\nx8\n9\n0\n1\n2\n3\n4\n5\n"
+		},
+		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#EF00EF")).BorderStyle(lipgloss.NormalBorder()),
+	}, 10)
+	v.Add(&ui.Text{
+		Content: func() string {
+			return "bbbbb"
+		},
+		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
+	}, 0)
 	tabs := ui.NewTabs(
 		ui.Tab{
-			Name:  "filterable",
-			Model: ui.NewFilterableList(createList("filtered ", 120)),
+			Name:  "v",
+			Model: &v,
+			Key:   "v",
 		},
 		ui.Tab{
-			Name:  "list",
-			Model: ui.NewList(createList("simple ", 120)),
+			Name: "filterable",
+			Model: ui.NewFilterableList(g, func(a string) string {
+				return ">>" + a + "<<"
+			}, nil),
+			Key: "f",
+		},
+		ui.Tab{
+			Name:  "tree",
+			Model: createTree(),
+			Key:   "t",
+		},
+		ui.Tab{
+			Name: "master-detail",
+			Model: ui.NewSplit(createTree(), ui.NewDetail(func(t string) string {
+				return "Detail: " + t
+			})),
+			Key: "m",
+		},
+		ui.Tab{
+			Name: "list",
+			Model: ui.NewList(g, func(a string) string {
+				return ">" + a + "<"
+			}),
+			Key: "l",
 		},
 	)
 	if err := tea.NewProgram(ui.NewKillable(tabs)).Start(); err != nil {
@@ -26,35 +67,19 @@ func main() {
 	}
 }
 
-func createList(prefix string, size int) *StaticList {
-	return &StaticList{
-		prefix: prefix,
-		size:   size,
-	}
-
-}
-
-type StaticList struct {
-	size   int
-	prefix string
-}
-
-func (s *StaticList) Size() int {
-	return s.size
-}
-
-func (s *StaticList) Render(i int) string {
-	return fmt.Sprintf("%s #%d", s.prefix, i)
-}
-
-func (s *StaticList) Included(filter string, i int) bool {
-	return strings.Contains(s.Render(i), filter)
-}
-
-func (s *StaticList) Item(i int) interface{} {
-	return i
-}
-
-func (s *StaticList) Refresh() {
-
+func createTree() *ui.TreeList[string, string] {
+	return ui.NewTreeList[string, string]("root",
+		func(t string) string {
+			return t
+		},
+		func(t string) (res []string) {
+			for i := 0; i < 10; i++ {
+				res = append(res, fmt.Sprintf("%s %d", t, i))
+			}
+			return res
+		},
+		func(t string) (string, bool) {
+			return t, len(t) < 10
+		},
+	)
 }

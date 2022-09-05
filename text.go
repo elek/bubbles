@@ -8,8 +8,7 @@ import (
 
 type Text struct {
 	Content func() string
-	Width   int
-	Height  int
+	size    Size
 	Cached  string
 	Style   lipgloss.Style
 }
@@ -31,30 +30,38 @@ func (t *Text) Init() tea.Cmd {
 
 func (t *Text) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case ResizeMsg:
-		w, h := t.Style.GetFrameSize()
-		t.Width = msg.Width - w
-		t.Height = msg.Height - h
+	case tea.WindowSizeMsg:
+		t.size = NewSizeFromSizeMsg(msg)
+		fx, fy := t.Style.GetFrameSize()
+		t.Style = t.Style.Width(msg.Width - fx).Height(msg.Height - fy)
+
 	case RefreshMsg:
-		t.Cached = t.Content()
+		t.Refresh()
 	}
 	return t, nil
 }
 
 func (t *Text) View() string {
 	out := ""
+	fx, fy := t.Style.GetFrameSize()
+	width := t.size.Width - fx
+	height := t.size.Height - fy
 
 	for ix, line := range strings.Split(t.Cached, "\n") {
-		if ix > t.Height-1 {
+		if ix > height-1 {
 			break
 		}
-		if len(line) > t.Width {
-			line = line[:t.Width]
+		if lipgloss.Width(line) > width {
+			line = line[:width]
 		}
 		if out != "" {
 			out += "\n"
 		}
 		out += line
 	}
-	return out
+	return t.Style.Render(out)
+}
+
+func (t *Text) Refresh() {
+	t.Cached = t.Content()
 }

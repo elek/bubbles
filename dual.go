@@ -11,6 +11,8 @@ type Dual struct {
 	right      tea.Model
 	leftStyle  lipgloss.Style
 	rightStyle lipgloss.Style
+	FixedLeft  int
+	FixedRight int
 }
 
 func NewDual(left tea.Model, right tea.Model) *Dual {
@@ -35,27 +37,15 @@ func (d *Dual) Init() tea.Cmd {
 
 func (d *Dual) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case ResizeMsg:
+	case tea.WindowSizeMsg:
 		lw, lh := d.leftStyle.GetFrameSize()
 		rw, rh := d.rightStyle.GetFrameSize()
-		d.leftStyle = d.leftStyle.Height(msg.Height - lh)
-		d.leftStyle = d.leftStyle.Width(msg.Width/2 - lw)
-		d.rightStyle = d.rightStyle.Height(msg.Height - rh)
-		d.rightStyle = d.rightStyle.Width(msg.Width/2 - rw)
 
-		lu, lc := d.left.Update(ResizeMsg{
-			Height: msg.Height - lh,
-			Width:  msg.Width/2 - lw,
-		})
-		d.left = lu
-
-		ru, rc := d.right.Update(ResizeMsg{
-			Height: msg.Height - rh,
-			Width:  msg.Width/2 - rw,
-		})
-		d.right = ru
-
-		return d, tea.Batch(lc, rc)
+		if d.FixedRight > 0 {
+			return d.resize(msg.Height-lh, msg.Width-d.FixedRight-lw, msg.Height-rh, d.FixedRight-rw)
+		} else {
+			return d.resize(msg.Height-lh, msg.Width/2-lw, msg.Height-rh, msg.Width/2-rw)
+		}
 
 	}
 
@@ -65,6 +55,26 @@ func (d *Dual) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	ru, rc := d.right.Update(msg)
 	d.right = ru
 
+	return d, tea.Batch(lc, rc)
+}
+
+func (d *Dual) resize(lh, lw, rh, rw int) (tea.Model, tea.Cmd) {
+	d.leftStyle = d.leftStyle.Height(lh)
+	d.leftStyle = d.leftStyle.Width(lw)
+	d.rightStyle = d.rightStyle.Height(rh)
+	d.rightStyle = d.rightStyle.Width(rw)
+
+	lu, lc := d.left.Update(tea.WindowSizeMsg{
+		Height: lh,
+		Width:  lw,
+	})
+	d.left = lu
+
+	ru, rc := d.right.Update(tea.WindowSizeMsg{
+		Height: rh,
+		Width:  rw,
+	})
+	d.right = ru
 	return d, tea.Batch(lc, rc)
 }
 

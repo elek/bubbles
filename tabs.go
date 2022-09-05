@@ -21,6 +21,11 @@ type Tab struct {
 	Key   string
 }
 
+type ActivateTabMsg struct {
+	Name string
+	Msg  tea.Msg
+}
+
 func NewTabs(tabs ...Tab) *Tabs {
 	t := &Tabs{}
 	for _, tab := range tabs {
@@ -41,6 +46,18 @@ func (t *Tabs) Init() tea.Cmd {
 
 func (t *Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case ActivateTabMsg:
+		for ix, tab := range t.children {
+			if tab.Key == msg.Name || tab.Name == msg.Name {
+				cmd := t.selectChild(ix)
+				if msg.Msg != nil {
+					updated, _ := t.children[t.selected].Model.Update(msg.Msg)
+					t.children[t.selected].Model = updated
+
+				}
+				return t, cmd
+			}
+		}
 	case tea.WindowSizeMsg:
 		t.width = msg.Width
 		t.height = msg.Height
@@ -66,7 +83,7 @@ func (t *Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (t *Tabs) selectChild(index int) tea.Cmd {
 	t.selected = index
 	var initCmd, cmd tea.Cmd
-	t.children[t.selected].Model, cmd = t.children[t.selected].Model.Update(ResizeMsg{
+	t.children[t.selected].Model, cmd = t.children[t.selected].Model.Update(tea.WindowSizeMsg{
 		Width:  t.width,
 		Height: t.height - 1,
 	})

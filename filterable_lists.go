@@ -4,27 +4,20 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"strings"
 )
 
-type FilterableList struct {
-	list            *List
-	input           textinput.Model
-	textBoxStyle    lipgloss.Style
-	filter          string
-	activeFilter    bool
-	filteredContent *contentDelegate
+type FilterableList[T any] struct {
+	*List[T]
+	fullContent  []T
+	filterFunc   func(string, T) bool
+	input        textinput.Model
+	textBoxStyle lipgloss.Style
+	filter       string
+	activeFilter bool
 }
 
-type FilterableListContent interface {
-	ListContent
-	Included(filter string, i int) bool
-}
-
-func (f *FilterableList) Init() tea.Cmd {
-	return f.list.Init()
-}
-
-func (f *FilterableList) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
+func (f *FilterableList[T]) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if f.activeFilter {
@@ -33,88 +26,66 @@ func (f *FilterableList) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 				f.input.Blur()
 				f.input.SetValue("")
 				f.filter = ""
-				f.filteredContent.Refilter("")
-				return f, nil
+				f.refilter("")
+				return f, AsCommand(ReleaseInput{})
 			}
 			if msg.String() == "enter" {
 				f.activeFilter = false
 				f.input.Blur()
-				return f, nil
+				return f, AsCommand(ReleaseInput{})
 			}
 			f.input, c = f.input.Update(msg)
-			f.filteredContent.Refilter(f.input.Value())
+			f.refilter(f.input.Value())
 			return f, c
 		}
 		switch msg.String() {
 		case "/":
 			f.activeFilter = true
 			f.filter = ""
-			nm1, c := f.list.Update(ResizeMsg{
-				Width:  f.list.width,
-				Height: f.list.height - 1,
+			nm1, c := f.List.Update(tea.WindowSizeMsg{
+				Width:  f.List.size.Width,
+				Height: f.List.size.Height - 1,
 			})
-			f.list = nm1.(*List)
+			f.List = nm1.(*List[T])
 			f.input.Focus()
-			return f, c
+			return f, tea.Batch(c, AsCommand(GrabInput{}))
 
 		}
 
 	}
 
-	m, c = f.list.Update(msg)
-	f.list = m.(*List)
+	m, c = f.List.Update(msg)
+	f.List = m.(*List[T])
 	return f, c
 }
 
-func (f *FilterableList) View() string {
+func (f *FilterableList[T]) View() string {
 	if f.activeFilter {
-		return f.input.View() + "\n" + f.list.View()
+		return f.input.View() + "\n" + f.List.View()
 	}
-	return f.list.View()
+	return f.List.View()
 }
 
-func NewFilterableList(content FilterableListContent) *FilterableList {
-	ti := textinput.New()
-	filteredContent := &contentDelegate{
-		content: content,
-	}
-	return &FilterableList{
-		input:           ti,
-		list:            NewList(filteredContent),
-		textBoxStyle:    lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()),
-		filteredContent: filteredContent,
-	}
-}
-
-type contentDelegate struct {
-	content FilterableListContent
-	filter  string
-	reindex []int
-}
-
-func (c *contentDelegate) Size() int {
-	return len(c.reindex)
-}
-
-func (c *contentDelegate) Render(i int) string {
-	return c.content.Render(c.reindex[i])
-}
-
-func (c *contentDelegate) Item(i int) interface{} {
-	return c.content.Item(c.reindex[i])
-}
-
-func (c *contentDelegate) Refresh() {
-	c.content.Refresh()
-	c.Refilter(c.filter)
-}
-
-func (c *contentDelegate) Refilter(filter string) {
-	c.filter = filter
-	c.reindex = []int{}
-	for i := 0; i < c.content.Size(); i++ {
-		if c.content.Included(filter, i) {
-			c.reindex = append(c.reindex, i)
+func (f *FilterableList[T]) refilter(s string) {
+	var filtered []T
+	for _, v := range f.fullContent {
+		if f.filterFunc(s, v) {
+			filtered = append(filtered, v)
 		}
+	}
+	f.List.content = filtered
+}
+
+func NewFilterableList[T any](content []T, render func(T) string, filter func(string, T) bool) *FilterableList[T] {
+	if filter == nil {
+		filter = func(s string, t T) bool {
+			return strings.Contains(render(t), s)
+		}
+	}
+	return &FilterableList[T]{
+		fullContent: content,
+		List:        NewList(content, render),
+		filterFunc:  filter,
+		input:       textinput.New(),
 	}
 }

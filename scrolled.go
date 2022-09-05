@@ -36,7 +36,7 @@ func (t *Scrolled) Init() tea.Cmd {
 
 func (t *Scrolled) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case ResizeMsg:
+	case tea.WindowSizeMsg:
 		w, h := t.Style.GetFrameSize()
 		t.Style.Height(msg.Height - h)
 		t.Style.Width(msg.Width - w)
@@ -99,6 +99,6 @@ func (t *Scrolled) View() string {
 	return t.Style.Render(out)
 }
 
-func (t *Scrolled) ResetPoistion() {
+func (t *Scrolled) ResetPosition() {
 	t.Start = 0
 }

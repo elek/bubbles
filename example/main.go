@@ -28,7 +28,32 @@ func main() {
 		},
 		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
 	}, 0)
+
+	h := ui.Horizontal{}
+	h.Add(&ui.Text{
+		Content: func() string {
+			return "bbbbb"
+		},
+		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
+	}, 300)
+	h.Add(&ui.Text{
+		Content: func() string {
+			return "123\n123\n12312312312312312222222222222222222222222222222222222222222222222222222222222222222222222222222222222333"
+		},
+		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
+	}, 0)
+
 	tabs := ui.NewTabs(
+		ui.Tab{
+			Name:  "focus",
+			Model: NewPanel(),
+			Key:   "o",
+		},
+		ui.Tab{
+			Name:  "h",
+			Model: &h,
+			Key:   "h",
+		},
 		ui.Tab{
 			Name:  "v",
 			Model: &v,
@@ -46,13 +71,13 @@ func main() {
 			Model: createTree(),
 			Key:   "t",
 		},
-		ui.Tab{
-			Name: "master-detail",
-			Model: ui.NewSplit(createTree(), ui.NewDetail(func(t string) string {
-				return "Detail: " + t
-			})),
-			Key: "m",
-		},
+		//ui.Tab{
+		//	Name: "master-detail",
+		//	Model: ui.NewSplit(createTree(), ui.NewDetail(func(t string) string {
+		//		return "Detail: " + t
+		//	})),
+		//	Key: "m",
+		//},
 		ui.Tab{
 			Name: "list",
 			Model: ui.NewList(g, func(a string) string {

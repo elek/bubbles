@@ -34,7 +34,8 @@ func (t *Text) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.size = NewSizeFromSizeMsg(msg)
 		fx, fy := t.Style.GetFrameSize()
 		t.Style = t.Style.Width(msg.Width - fx).Height(msg.Height - fy)
-
+	case StyleChangeMsg:
+		t.Style = msg.Change(t.Style)
 	case RefreshMsg:
 		t.Refresh()
 	}

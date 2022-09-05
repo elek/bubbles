@@ -2,10 +2,21 @@ package ui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"strings"
 )
 
 type Horizontal struct {
-	Vertical
+	Size     tea.WindowSizeMsg
+	Children []tea.Model
+	Limits   []int
+}
+
+func (v *Horizontal) Init() tea.Cmd {
+	var cmds []tea.Cmd
+	for ix := 0; ix < len(v.Children); ix++ {
+		cmds = append(cmds, v.Children[ix].Init())
+	}
+	return tea.Batch(cmds...)
 }
 
 func (v *Horizontal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -16,21 +27,21 @@ func (v *Horizontal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		used := 0
 		for ix := 0; ix < len(v.Children); ix++ {
-			h := v.Heights[ix]
-			remaining := v.Size.Height - used
+			w := v.Limits[ix]
+			remaining := v.Size.Width - used
 			if remaining <= 0 {
 				break
 			}
-			if h > remaining || h == 0 {
-				h = remaining
+			if w > remaining || w == 0 {
+				w = remaining
 			}
 			nm, c := v.Children[ix].Update(tea.WindowSizeMsg{
-				Height: h,
-				Width:  v.Size.Width,
+				Width:  w,
+				Height: v.Size.Height,
 			})
 			cmds = append(cmds, c)
 			v.Children[ix] = nm
-			used += h
+			used += w
 		}
 		return v, tea.Batch(cmds...)
 	}
@@ -44,14 +55,35 @@ func (v *Horizontal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (v *Horizontal) View() string {
+	renders := make([][]string, len(v.Children))
+	for ix, m := range v.Children {
+		renders[ix] = strings.Split(m.View(), "\n")
+	}
+
 	out := ""
-	for _, m := range v.Children {
-		if len(out) > 0 {
-			out += "\n"
+	for i := 0; i < v.Size.Height-1; i++ {
+		for p, _ := range v.Children {
+			part := ""
+			if len(renders[p]) > i {
+				part = renders[p][i]
+			}
+			out += part
 		}
-		out += m.View()
+		out += "\n"
 	}
 	return out
 }
 
-var _ tea.Model = &Vertical{}
+func exactSize(part string, i int) string {
+	for c := len(part); c < i; c++ {
+		part += " "
+	}
+	return AnsiTrim(part, i)
+}
+
+func (v *Horizontal) Add(model tea.Model, height int) {
+	v.Children = append(v.Children, model)
+	v.Limits = append(v.Limits, height)
+}
+
+var _ tea.Model = &Horizontal{}

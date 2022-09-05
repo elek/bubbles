@@ -8,7 +8,7 @@ import (
 type Vertical struct {
 	Size     tea.WindowSizeMsg
 	Children []tea.Model
-	Heights  []int
+	Limits   []int
 	Styles   []lipgloss.Style
 }
 
@@ -28,7 +28,7 @@ func (v *Vertical) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		used := 0
 		for ix := 0; ix < len(v.Children); ix++ {
-			h := v.Heights[ix]
+			h := v.Limits[ix]
 			remaining := v.Size.Height - used
 			if remaining <= 0 {
 				break
@@ -68,7 +68,7 @@ func (v *Vertical) View() string {
 
 func (v *Vertical) Add(model tea.Model, height int) {
 	v.Children = append(v.Children, model)
-	v.Heights = append(v.Heights, height)
+	v.Limits = append(v.Limits, height)
 }
 
 var _ tea.Model = &Vertical{}

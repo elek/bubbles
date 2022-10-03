@@ -5,10 +5,16 @@ import (
 	"strings"
 )
 
+type sizeFunc func(available int) (size int)
+
 type Horizontal struct {
 	Size     tea.WindowSizeMsg
-	Children []tea.Model
-	Limits   []int
+	Children Panels
+}
+
+type Panel struct {
+	tea.Model
+	Size SizeDefinition
 }
 
 func (v *Horizontal) Init() tea.Cmd {
@@ -24,32 +30,25 @@ func (v *Horizontal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		var cmds []tea.Cmd
 		v.Size = msg
-
-		used := 0
-		for ix := 0; ix < len(v.Children); ix++ {
-			w := v.Limits[ix]
-			remaining := v.Size.Width - used
-			if remaining <= 0 {
-				break
-			}
-			if w > remaining || w == 0 {
-				w = remaining
-			}
-			nm, c := v.Children[ix].Update(tea.WindowSizeMsg{
-				Width:  w,
-				Height: v.Size.Height,
+		w := msg.Width
+		h := msg.Height
+		sizes := Resolve(v.Children.sizeDefinitions(), w)
+		for i, p := range v.Children {
+			nm, c := p.Update(tea.WindowSizeMsg{
+				Width:  sizes[i],
+				Height: h,
 			})
 			cmds = append(cmds, c)
-			v.Children[ix] = nm
-			used += w
+			p.Model = nm
 		}
 		return v, tea.Batch(cmds...)
 	}
+
 	var cmds []tea.Cmd
-	for ix := 0; ix < len(v.Children); ix++ {
-		nm, c := v.Children[ix].Update(msg)
+	for _, p := range v.Children {
+		nm, c := p.Update(msg)
 		cmds = append(cmds, c)
-		v.Children[ix] = nm
+		p.Model = nm
 	}
 	return v, tea.Batch(cmds...)
 }
@@ -61,7 +60,10 @@ func (v *Horizontal) View() string {
 	}
 
 	out := ""
-	for i := 0; i < v.Size.Height-1; i++ {
+	for i := 0; i < v.Size.Height; i++ {
+		if out != "" {
+			out += "\n"
+		}
 		for p, _ := range v.Children {
 			part := ""
 			if len(renders[p]) > i {
@@ -69,11 +71,17 @@ func (v *Horizontal) View() string {
 			}
 			out += part
 		}
-		out += "\n"
+
 	}
 	return out
 }
 
+func (v Panels) sizeDefinitions() (res []SizeDefinition) {
+	for _, p := range v {
+		res = append(res, p.Size)
+	}
+	return
+}
 func exactSize(part string, i int) string {
 	for c := len(part); c < i; c++ {
 		part += " "
@@ -81,9 +89,11 @@ func exactSize(part string, i int) string {
 	return AnsiTrim(part, i)
 }
 
-func (v *Horizontal) Add(model tea.Model, height int) {
-	v.Children = append(v.Children, model)
-	v.Limits = append(v.Limits, height)
+func (v *Horizontal) Add(model tea.Model, size SizeDefinition) {
+	v.Children = append(v.Children, &Panel{
+		Model: model,
+		Size:  size,
+	})
 }
 
 var _ tea.Model = &Horizontal{}

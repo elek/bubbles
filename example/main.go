@@ -21,38 +21,24 @@ func main() {
 			return "aaa1\n2\n3\n4\n5\n6\n7\nx8\n9\n0\n1\n2\n3\n4\n5\n"
 		},
 		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#EF00EF")).BorderStyle(lipgloss.NormalBorder()),
-	}, 10)
+	}, ui.FixedSize(10))
 	v.Add(&ui.Text{
 		Content: func() string {
 			return "bbbbb"
 		},
 		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
-	}, 0)
-
-	h := ui.Horizontal{}
-	h.Add(&ui.Text{
-		Content: func() string {
-			return "bbbbb"
-		},
-		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
-	}, 300)
-	h.Add(&ui.Text{
-		Content: func() string {
-			return "123\n123\n12312312312312312222222222222222222222222222222222222222222222222222222222222222222222222222222222222333"
-		},
-		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
-	}, 0)
+	}, ui.RemainingSize())
 
 	tabs := ui.NewTabs(
 		ui.Tab{
-			Name:  "focus",
-			Model: NewPanel(),
-			Key:   "o",
+			Name:  "horizontal",
+			Model: NewHorizontalPane(),
+			Key:   "h",
 		},
 		ui.Tab{
-			Name:  "h",
-			Model: &h,
-			Key:   "h",
+			Name:  "focus",
+			Model: NewFocusablePane(),
+			Key:   "o",
 		},
 		ui.Tab{
 			Name:  "v",
@@ -79,11 +65,9 @@ func main() {
 		//	Key: "m",
 		//},
 		ui.Tab{
-			Name: "list",
-			Model: ui.NewList(g, func(a string) string {
-				return ">" + a + "<"
-			}),
-			Key: "l",
+			Name:  "list",
+			Model: NewListPane(),
+			Key:   "l",
 		},
 	)
 	if err := tea.NewProgram(ui.NewKillable(tabs)).Start(); err != nil {

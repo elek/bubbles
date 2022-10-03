@@ -8,7 +8,7 @@ import (
 )
 
 type Tabs struct {
-	children    []Tab
+	children    []*Tab
 	selected    int
 	width       int
 	height      int
@@ -28,11 +28,11 @@ type ActivateTabMsg struct {
 
 func NewTabs(tabs ...Tab) *Tabs {
 	t := &Tabs{}
-	for _, tab := range tabs {
+	for ix, tab := range tabs {
 		if tab.Key == "" {
 			tab.Key = fmt.Sprintf("f%d", len(t.children)+1)
 		}
-		t.children = append(t.children, tab)
+		t.children = append(t.children, &tabs[ix])
 	}
 	t.initialized = make([]bool, len(t.children))
 	return t
@@ -42,6 +42,16 @@ var _ tea.Model = &Tabs{}
 
 func (t *Tabs) Init() tea.Cmd {
 	return t.selectChild(t.selected)
+}
+
+func (t *Tabs) UpdateAll(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	for ix, tab := range t.children {
+		m, c := tab.Model.Update(msg)
+		t.children[ix].Model = m
+		cmd = tea.Batch(cmd, c)
+	}
+	return t, cmd
 }
 
 func (t *Tabs) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -106,10 +116,13 @@ func (t *Tabs) View() string {
 		Render(strings.Join(names, "    ")) + "\n" + t.children[t.selected].Model.View()
 }
 
-func (t *Tabs) Add(s string, details tea.Model) {
-	t.children = append(t.children, Tab{
+func (t *Tabs) Add(s string, details tea.Model, key string) *Tab {
+	tab := &Tab{
 		Name:  s,
 		Model: details,
-	})
+		Key:   key,
+	}
+	t.children = append(t.children, tab)
 	t.initialized = append(t.initialized, false)
+	return tab
 }

@@ -21,7 +21,6 @@ func (t *Detail[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case FocusedItemMsg[T]:
 		t.focused = msg.Item
-		t.Text.Refresh()
 	}
 
 	m, c := t.Text.Update(msg)

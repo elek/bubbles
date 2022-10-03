@@ -2,14 +2,13 @@ package ui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
+
+type Panels []*Panel
 
 type Vertical struct {
 	Size     tea.WindowSizeMsg
-	Children []tea.Model
-	Limits   []int
-	Styles   []lipgloss.Style
+	Children Panels
 }
 
 func (v *Vertical) Init() tea.Cmd {
@@ -25,32 +24,25 @@ func (v *Vertical) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		var cmds []tea.Cmd
 		v.Size = msg
-
-		used := 0
-		for ix := 0; ix < len(v.Children); ix++ {
-			h := v.Limits[ix]
-			remaining := v.Size.Height - used
-			if remaining <= 0 {
-				break
-			}
-			if h > remaining || h == 0 {
-				h = remaining
-			}
-			nm, c := v.Children[ix].Update(tea.WindowSizeMsg{
-				Height: h,
-				Width:  v.Size.Width,
+		w := msg.Width
+		h := msg.Height
+		sizes := Resolve(v.Children.sizeDefinitions(), h)
+		for i, p := range v.Children {
+			nm, c := p.Update(tea.WindowSizeMsg{
+				Width:  w,
+				Height: sizes[i],
 			})
 			cmds = append(cmds, c)
-			v.Children[ix] = nm
-			used += h
+			p.Model = nm
 		}
 		return v, tea.Batch(cmds...)
 	}
+
 	var cmds []tea.Cmd
-	for ix := 0; ix < len(v.Children); ix++ {
-		nm, c := v.Children[ix].Update(msg)
+	for _, p := range v.Children {
+		nm, c := p.Update(msg)
 		cmds = append(cmds, c)
-		v.Children[ix] = nm
+		p.Model = nm
 	}
 	return v, tea.Batch(cmds...)
 }
@@ -66,9 +58,11 @@ func (v *Vertical) View() string {
 	return out
 }
 
-func (v *Vertical) Add(model tea.Model, height int) {
-	v.Children = append(v.Children, model)
-	v.Limits = append(v.Limits, height)
+func (v *Vertical) Add(model tea.Model, size SizeDefinition) {
+	v.Children = append(v.Children, &Panel{
+		Model: model,
+		Size:  size,
+	})
 }
 
 var _ tea.Model = &Vertical{}

@@ -13,8 +13,9 @@ func DefaultDefocus(s lipgloss.Style) lipgloss.Style {
 	return s.BorderStyle(lipgloss.NormalBorder())
 }
 
-type StyleChangeMsg struct {
-	Change func(lipgloss.Style) lipgloss.Style
+type FocusMsg struct {
+	Change  func(lipgloss.Style) lipgloss.Style
+	Focused bool
 }
 
 type FocusGroup struct {
@@ -30,11 +31,9 @@ func NewFocusGroup(child tea.Model) *FocusGroup {
 	}
 }
 func (f *FocusGroup) Init() tea.Cmd {
-	m, c := f.Items[f.Focused].Update(StyleChangeMsg{
-		Change: DefaultFocus,
-	})
-	f.Items[f.Focused] = m
-	return tea.Batch(f.Model.Init(), c)
+	cmds := f.focusMessages()
+	cmds = append(cmds, f.Model.Init())
+	return tea.Batch(cmds...)
 }
 
 func (f *FocusGroup) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -42,29 +41,34 @@ func (f *FocusGroup) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "tab":
-			cmds := []tea.Cmd{}
 			f.Focused++
 			if f.Focused > len(f.Items)-1 {
 				f.Focused = 0
 			}
-			for i := 0; i < len(f.Items); i++ {
-				changeMsg := StyleChangeMsg{}
-				if i == f.Focused {
-					changeMsg.Change = DefaultFocus
-				} else {
-					changeMsg.Change = DefaultDefocus
-				}
-				m, c := f.Items[i].Update(changeMsg)
-				f.Items[i] = m
-				cmds = append(cmds, c)
-			}
-			return f, tea.Batch(cmds...)
+			return f, tea.Batch(f.focusMessages()...)
 		}
 	}
 
 	m, c := f.Model.Update(msg)
 	f.Model = m
 	return f, c
+}
+
+func (f *FocusGroup) focusMessages() []tea.Cmd {
+	cmds := []tea.Cmd{}
+	for i := 0; i < len(f.Items); i++ {
+		changeMsg := FocusMsg{}
+		changeMsg.Focused = i == f.Focused
+		if i == f.Focused {
+			changeMsg.Change = DefaultFocus
+		} else {
+			changeMsg.Change = DefaultDefocus
+		}
+		m, c := f.Items[i].Update(changeMsg)
+		f.Items[i] = m
+		cmds = append(cmds, c)
+	}
+	return cmds
 }
 
 func (f *FocusGroup) View() string {

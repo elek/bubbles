@@ -6,9 +6,9 @@ import (
 	"github.com/elek/bubbles"
 )
 
-func NewPanel() tea.Model {
+func NewFocusablePane() tea.Model {
 	h := ui.Horizontal{}
-	m1 := &ui.Text{
+	m1 := &ui.Scrolled{
 		Content: func() string {
 			return "first"
 		},
@@ -20,18 +20,18 @@ func NewPanel() tea.Model {
 		},
 		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#EF00EF")).BorderStyle(lipgloss.NormalBorder()),
 	}
-	m3 := &ui.Text{
+	m3 := &ui.Scrolled{
 		Content: func() string {
-			return "first"
+			return "first\n1\n2\n3\n4\n5\n6\n\n66666\n6\n6\n6\n6\n6\n"
 		},
 		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#00EFEF")).BorderStyle(lipgloss.NormalBorder()),
 	}
 
 	v := ui.Vertical{}
-	v.Add(m2, 10)
-	v.Add(m3, 0)
-	h.Add(m1, 100)
-	h.Add(&v, 0)
+	v.Add(m2, ui.FixedSize(10))
+	v.Add(m3, ui.RemainingSize())
+	h.Add(m1, ui.FixedSize(100))
+	h.Add(&v, ui.RemainingSize())
 	fg := ui.NewFocusGroup(&h)
 	fg.Add(m1)
 	fg.Add(m3)

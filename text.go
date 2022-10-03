@@ -9,7 +9,6 @@ import (
 type Text struct {
 	Content func() string
 	size    Size
-	Cached  string
 	Style   lipgloss.Style
 }
 
@@ -34,10 +33,6 @@ func (t *Text) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.size = NewSizeFromSizeMsg(msg)
 		fx, fy := t.Style.GetFrameSize()
 		t.Style = t.Style.Width(msg.Width - fx).Height(msg.Height - fy)
-	case StyleChangeMsg:
-		t.Style = msg.Change(t.Style)
-	case RefreshMsg:
-		t.Refresh()
 	}
 	return t, nil
 }
@@ -48,12 +43,12 @@ func (t *Text) View() string {
 	width := t.size.Width - fx
 	height := t.size.Height - fy
 
-	for ix, line := range strings.Split(t.Cached, "\n") {
+	for ix, line := range strings.Split(t.Content(), "\n") {
 		if ix > height-1 {
 			break
 		}
 		if lipgloss.Width(line) > width {
-			line = line[:width]
+			line = AnsiTrim(line, width)
 		}
 		if out != "" {
 			out += "\n"
@@ -63,6 +58,10 @@ func (t *Text) View() string {
 	return t.Style.Render(out)
 }
 
-func (t *Text) Refresh() {
-	t.Cached = t.Content()
+func (t *Text) GetHeight() int {
+	return t.size.Height
+}
+
+func (t *Detail[T]) ChangeStyle(f func(orig lipgloss.Style) lipgloss.Style) {
+	t.Style = f(t.Style)
 }

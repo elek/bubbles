@@ -30,14 +30,14 @@ func (t *TreeList[L, T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.List.content = t.items(t.breadcrumb[len(t.breadcrumb)-1])
 			}
 			t.List.selected = 0
-			t.List.start = 0
+			t.List.verticalStart = 0
 			return t, AsCommand(FocusedItemMsg[T]{Item: t.List.content[t.List.selected]})
 		case tea.KeyEnter:
 			sel, ok := t.down(t.List.content[t.selected])
 			if ok {
 				t.breadcrumb = append(t.breadcrumb, sel)
 				t.List.content = t.items(sel)
-				t.List.start = 0
+				t.List.verticalStart = 0
 				t.List.selected = 0
 			}
 			return t, AsCommand(FocusedItemMsg[T]{Item: t.List.content[t.List.selected]})
@@ -57,7 +57,7 @@ func (t *TreeList[L, T]) Selected() T {
 }
 
 func (t *TreeList[L, T]) NavigateTo(f func(check T) bool) {
-	t.start = 0
+	t.verticalStart = 0
 	t.selected = 0
 	root := t.breadcrumb[0]
 	t.breadcrumb = []L{}

@@ -10,14 +10,15 @@ var (
 )
 
 type List[T any] struct {
-	content       []T
-	size          tea.WindowSizeMsg
-	start         int
-	selected      int
-	style         lipgloss.Style
-	Render        func(T) string
-	SelectedStyle lipgloss.Style
-	Focused       bool
+	content         []T
+	size            tea.WindowSizeMsg
+	verticalStart   int
+	horizontalStart int
+	selected        int
+	style           lipgloss.Style
+	Render          func(T) string
+	SelectedStyle   lipgloss.Style
+	Focused         bool
 }
 
 type FocusedItemMsg[T any] struct {
@@ -62,6 +63,13 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if t.Focused {
 			switch msg.Type {
+			case tea.KeyCtrlRight:
+				t.horizontalStart += 3
+			case tea.KeyCtrlLeft:
+				t.horizontalStart -= 3
+				if t.horizontalStart < 0 {
+					t.horizontalStart = 0
+				}
 			case tea.KeyDown, tea.KeyPgDown:
 				if len(t.content) == 0 {
 					return t, nil
@@ -77,8 +85,8 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if t.selected > len(t.content)-1 {
 					t.selected = len(t.content) - 1
 				}
-				if t.selected-t.start >= height {
-					t.start += height
+				if t.selected-t.verticalStart >= height {
+					t.verticalStart += height
 				}
 
 				return t, func() tea.Msg {
@@ -102,8 +110,8 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if t.selected < 0 {
 					t.selected = 0
 				}
-				if t.selected-t.start < 0 {
-					t.start -= height
+				if t.selected-t.verticalStart < 0 {
+					t.verticalStart -= height
 				}
 				return t, func() tea.Msg {
 					return FocusedItemMsg[T]{
@@ -123,12 +131,15 @@ func (t *List[T]) View() string {
 	width := t.size.Width - w
 
 	out := ""
-	for i := t.start; i < t.start+height; i++ {
+	for i := t.verticalStart; i < t.verticalStart+height; i++ {
 		if i >= len(t.content) {
 			break
 		}
 
 		line := t.Render(t.content[i])
+		if len(line) > t.horizontalStart {
+			line = line[t.horizontalStart:]
+		}
 		if lipgloss.Width(line) > width {
 			line = AnsiTrim(line, width)
 		}
@@ -145,7 +156,7 @@ func (t *List[T]) View() string {
 
 func (t *List[T]) Reset() {
 	t.selected = 0
-	t.start = 0
+	t.verticalStart = 0
 }
 
 func (t *List[T]) SetContent(n []T) {

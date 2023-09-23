@@ -29,6 +29,14 @@ func main() {
 		Style: lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder()),
 	}, ui.RemainingSize())
 
+	scrolled := ui.NewScrolled(func() string {
+		out := ""
+		for i := 0; i < 1000; i++ {
+			out += fmt.Sprintf("%d\n", i)
+		}
+		return out
+	})
+	scrolled.Style = lipgloss.NewStyle().BorderBackground(ui.White).Background(lipgloss.Color("#0000EF")).BorderStyle(lipgloss.NormalBorder())
 	tabs := ui.NewTabs(
 		ui.Tab{
 			Name:  "horizontal",
@@ -39,6 +47,11 @@ func main() {
 			Name:  "focus",
 			Model: NewFocusablePane(),
 			Key:   "o",
+		},
+		ui.Tab{
+			Name:  "focus",
+			Model: NewFocusablePane2(),
+			Key:   "p",
 		},
 		ui.Tab{
 			Name:  "v",
@@ -53,9 +66,21 @@ func main() {
 			Key: "f",
 		},
 		ui.Tab{
+			Name: "filterable",
+			Model: ui.NewFilterableList(g, func(a string) string {
+				return ">>" + a + "<<"
+			}, nil, ui.FilterableListInitialFilter[string]("2")),
+			Key: "g",
+		},
+		ui.Tab{
 			Name:  "tree",
 			Model: createTree(),
 			Key:   "t",
+		},
+		ui.Tab{
+			Name:  "scrollable",
+			Model: scrolled,
+			Key:   "s",
 		},
 		//ui.Tab{
 		//	Name: "master-detail",

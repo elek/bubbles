@@ -30,10 +30,12 @@ func NewFocusablePane() tea.Model {
 	v := ui.Vertical{}
 	v.Add(m2, ui.FixedSize(10))
 	v.Add(m3, ui.RemainingSize())
+
 	h.Add(m1, ui.FixedSize(100))
 	h.Add(&v, ui.RemainingSize())
+
 	fg := ui.NewFocusGroup(&h)
-	fg.Add(m1)
+	fg.Add(m2)
 	fg.Add(m3)
 	return fg
 }

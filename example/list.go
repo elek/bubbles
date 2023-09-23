@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	ui "github.com/elek/bubbles"
 )
 
@@ -15,5 +16,8 @@ func NewListPane() tea.Model {
 	l := ui.NewList(g, func(a string) string {
 		return ">" + a + "<"
 	})
-	return ui.WithBorder(ui.NewHeader("NAME", l))
+	l.ChangeStyle(func(orig lipgloss.Style) lipgloss.Style {
+		return orig.BorderStyle(lipgloss.NormalBorder())
+	})
+	return ui.NewHeader("NAME", l)
 }

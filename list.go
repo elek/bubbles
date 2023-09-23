@@ -11,7 +11,6 @@ var (
 
 type List[T any] struct {
 	content         []T
-	size            tea.WindowSizeMsg
 	verticalStart   int
 	horizontalStart int
 	selected        int
@@ -27,14 +26,10 @@ type FocusedItemMsg[T any] struct {
 
 func NewList[T any](content []T, render func(T) string) *List[T] {
 	return &List[T]{
-		content: content,
-		size: tea.WindowSizeMsg{
-			Width:  100,
-			Height: 50,
-		},
+		content:       content,
 		Render:        render,
 		SelectedStyle: Selected,
-		style:         lipgloss.NewStyle(),
+		style:         lipgloss.NewStyle().Width(100).Height(50),
 		Focused:       true,
 	}
 }
@@ -57,9 +52,8 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.Focused = msg.Focused
 	case tea.WindowSizeMsg:
 		w, h := t.style.GetFrameSize()
-		t.style.Height(msg.Height - h)
-		t.style.Width(msg.Width - w)
-		t.size = msg
+		t.style = t.style.Height(msg.Height - h)
+		t.style = t.style.Width(msg.Width - w)
 	case tea.KeyMsg:
 		if t.Focused {
 			switch msg.Type {
@@ -75,7 +69,7 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return t, nil
 				}
 				_, h := t.style.GetFrameSize()
-				height := t.size.Height - h
+				height := t.style.GetHeight() - h
 				if msg.Type == tea.KeyDown {
 					t.selected++
 				} else {
@@ -99,7 +93,7 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return t, nil
 				}
 				_, h := t.style.GetFrameSize()
-				height := t.size.Height - h
+				height := t.style.GetHeight() - h
 
 				if msg.Type == tea.KeyUp {
 					t.selected--
@@ -126,9 +120,8 @@ func (t *List[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (t *List[T]) View() string {
-	w, h := t.style.GetFrameSize()
-	height := t.size.Height - h
-	width := t.size.Width - w
+	height := t.style.GetHeight()
+	width := t.style.GetWidth()
 
 	out := ""
 	for i := t.verticalStart; i < t.verticalStart+height; i++ {

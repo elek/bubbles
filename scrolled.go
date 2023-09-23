@@ -20,7 +20,7 @@ type Scrolled struct {
 func NewScrolled(content func() string) *Scrolled {
 	return &Scrolled{
 		Content: content,
-		Style:   lipgloss.NewStyle(),
+		Style:   lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()),
 		Focused: true,
 	}
 }
@@ -40,13 +40,13 @@ func (t *Scrolled) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		w, h := t.Style.GetFrameSize()
-		t.Style.Height(msg.Height - h)
-		t.Style.Width(msg.Width - w)
+		t.Style = t.Style.Height(msg.Height - h)
+		t.Style = t.Style.Width(msg.Width - w)
 
 		t.Width = msg.Width - w
 		t.Height = msg.Height - h
 	case FocusMsg:
-		t.Style = msg.Change(t.Style)
+		//t.Style = msg.Change(t.Style)
 		t.Focused = msg.Focused
 	case RefreshMsg:
 		t.Lines = strings.Split(t.Content(), "\n")

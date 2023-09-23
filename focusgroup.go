@@ -6,11 +6,19 @@ import (
 )
 
 func DefaultFocus(s lipgloss.Style) lipgloss.Style {
-	return s.BorderStyle(lipgloss.DoubleBorder())
+	w, h := s.GetFrameSize()
+	st := s.BorderStyle(lipgloss.DoubleBorder())
+	st = st.Height(s.GetHeight() - st.GetVerticalBorderSize() + w)
+	st = st.Width(s.GetWidth() - st.GetHorizontalBorderSize() + h)
+	return st
 }
 
 func DefaultDefocus(s lipgloss.Style) lipgloss.Style {
-	return s.BorderStyle(lipgloss.NormalBorder())
+	w, h := s.GetFrameSize()
+	st := s.BorderStyle(lipgloss.NormalBorder())
+	st = st.Height(s.GetHeight() - st.GetVerticalBorderSize() + w)
+	st = st.Width(s.GetWidth() - st.GetHorizontalBorderSize() + h)
+	return st
 }
 
 type FocusMsg struct {

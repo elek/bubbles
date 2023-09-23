@@ -7,7 +7,8 @@ import (
 
 type Bordered struct {
 	tea.Model
-	style lipgloss.Style
+	style   lipgloss.Style
+	focused bool
 }
 
 func WithBorder(m tea.Model) tea.Model {

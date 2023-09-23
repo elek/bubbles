@@ -10,6 +10,7 @@ type Text struct {
 	Content func() string
 	size    Size
 	Style   lipgloss.Style
+	Focused bool
 }
 
 func NewText(content func() string) *Text {
@@ -29,6 +30,9 @@ func (t *Text) Init() tea.Cmd {
 
 func (t *Text) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case FocusMsg:
+		t.Style = msg.Change(t.Style)
+		t.Focused = msg.Focused
 	case tea.WindowSizeMsg:
 		t.size = NewSizeFromSizeMsg(msg)
 		fx, fy := t.Style.GetFrameSize()

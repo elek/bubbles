@@ -17,8 +17,42 @@ type FilterableList[T any] struct {
 	activeFilter bool
 }
 
+type initFilter struct {
+	filter string
+}
+
+func (t *FilterableList[T]) Init() tea.Cmd {
+	if t.filter != "" {
+		return tea.Batch(t.List.Init(), func() tea.Msg {
+			return initFilter{filter: t.filter}
+		})
+	}
+	return t.List.Init()
+
+}
+
 func (f *FilterableList[T]) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
+
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		if f.filter != "" {
+			msg.Height--
+		}
+		m1, c1 := f.List.Update(msg)
+		f.List = m1.(*List[T])
+		return f, c1
+	case initFilter:
+		f.activeFilter = true
+		f.filter = msg.filter
+		nm1, c := f.List.Update(tea.WindowSizeMsg{
+			Width:  f.List.style.GetWidth() - -f.List.style.GetHorizontalBorderSize(),
+			Height: f.List.style.GetHeight() - 1 - -f.List.style.GetVerticalBorderSize(),
+		})
+		f.List = nm1.(*List[T])
+		f.input.SetValue(msg.filter)
+		f.input.Focus()
+		f.refilter(msg.filter)
+		return f, tea.Batch(c, AsCommand(GrabInput{}))
 	case tea.KeyMsg:
 		if f.activeFilter {
 			if msg.String() == "esc" {
@@ -34,6 +68,11 @@ func (f *FilterableList[T]) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 				f.input.Blur()
 				return f, AsCommand(ReleaseInput{})
 			}
+			if msg.Type == tea.KeyUp || msg.Type == tea.KeyDown {
+				model, cmd := f.List.Update(msg)
+				f.List = model.(*List[T])
+				return f, cmd
+			}
 			f.input, c = f.input.Update(msg)
 			f.refilter(f.input.Value())
 			return f, c
@@ -43,8 +82,8 @@ func (f *FilterableList[T]) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 			f.activeFilter = true
 			f.filter = ""
 			nm1, c := f.List.Update(tea.WindowSizeMsg{
-				Width:  f.List.size.Width,
-				Height: f.List.size.Height - 1,
+				Width:  f.List.style.GetWidth() - f.List.style.GetHorizontalBorderSize(),
+				Height: f.List.style.GetHeight() - 1 - f.List.style.GetVerticalBorderSize(),
 			})
 			f.List = nm1.(*List[T])
 			f.input.Focus()
@@ -76,16 +115,28 @@ func (f *FilterableList[T]) refilter(s string) {
 	f.List.content = filtered
 }
 
-func NewFilterableList[T any](content []T, render func(T) string, filter func(string, T) bool) *FilterableList[T] {
+type FilterableListOpts[T any] func(*FilterableList[T])
+
+func FilterableListInitialFilter[T any](s string) FilterableListOpts[T] {
+	return func(f *FilterableList[T]) {
+		f.filter = s
+	}
+}
+
+func NewFilterableList[T any](content []T, render func(T) string, filter func(string, T) bool, opts ...FilterableListOpts[T]) *FilterableList[T] {
 	if filter == nil {
 		filter = func(s string, t T) bool {
 			return strings.Contains(render(t), s)
 		}
 	}
-	return &FilterableList[T]{
+	f := &FilterableList[T]{
 		fullContent: content,
 		List:        NewList(content, render),
 		filterFunc:  filter,
 		input:       textinput.New(),
 	}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return f
 }
